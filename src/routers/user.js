@@ -75,7 +75,7 @@ router.get('/users/:id', async (req, res) => {
     }
 });
 
-router.patch('/users/:id', async (req, res) => {
+router.patch('/users/me', auth, async (req, res) => {
 
     // send more information if the update data is not included in the scheme.
     const updates = Object.keys(req.body);
@@ -87,23 +87,19 @@ router.patch('/users/:id', async (req, res) => {
     }
 
     try {
-        const user = await User.findById(req.params.id);
 
-        if (!user) {
-            return res.status(404).send('User not found');
-        }
 
         updates.forEach(update => {
-            user[update] = req.body[update];
+            req.user[update] = req.body[update];
         });
 
-        const newUser = await user.save();
+        await req.user.save();
 
         // findByIdAndUpdate with new: true to make sure this method return new data that has been updated
         // runValidators is true to make sure update data is in the right format.
         // const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true});
 
-        res.send(newUser);
+        res.send(req.user);
     } catch(e) {
         res.send(400).send(e);
 
@@ -112,15 +108,11 @@ router.patch('/users/:id', async (req, res) => {
     }
 });
 
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/me', auth,async (req, res) => {
     try {
-        const user = await User.findByIdAndDelete(req.params.id);
+        await req.user.remove();
 
-        if (!user) {
-            return res.status(404).send('User not found to be deleted');
-        }
-
-        res.send(user);
+        res.send(req.user);
     } catch(e) {
         res.status(500).send();
     }

@@ -51,3 +51,19 @@ app.listen(port, () => {
 // }
 
 // myFunction();
+
+// advance 
+const Task = require('./model/task');
+const User = require('./model/user');
+const refCheck = async() => {
+    // const task = await Task.findById('5ced9df72474ca4a7497cc56');
+
+    // await task.populate('owner').execPopulate();
+    // console.log(task.owner);
+
+    const user = await User.findById('5ced9be45929e42dd469bb4e');
+    await user.populate('tasks').execPopulate();
+    console.log(user.tasks);
+};
+
+refCheck();

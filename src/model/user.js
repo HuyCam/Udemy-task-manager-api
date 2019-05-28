@@ -49,6 +49,13 @@ const userSchema = new mongoose.Schema({
     }]
 });
 
+// create a temporary relationship between localField id and
+// foreignField: owner of Task
+userSchema.virtual('tasks', {
+    ref: 'Task',
+    localField: '_id',
+    foreignField: 'owner'
+})
 // note that this is not arrow function. Instance method
 userSchema.methods.generateAuthToken = async function() {
     const user = this;
@@ -58,6 +65,17 @@ userSchema.methods.generateAuthToken = async function() {
     user.tokens = user.tokens.concat({ token });
     await user.save();
     return token;
+}
+
+userSchema.methods.toJSON = function() {
+    const user = this;
+
+    const userObject = user.toObject();
+
+    delete userObject.password;
+    delete userObject.tokens;
+
+    return userObject;
 }
 
 // set up your own prototype method. Model method.
