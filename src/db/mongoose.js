@@ -6,16 +6,13 @@
  string, etc.
 ***************************************************************/
 
-
 const mongoose = require('mongoose');
 // mongod url/dabase-name
-mongoose.connect('mongodb://127.0.0.1:27017/task-manager-api', {
+mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useCreateIndex: true,    // create index so mongoose can access data quicker
     useFindAndModify: false  // to cancel notification of deprication on useFindAndModify
 });
-
-
 
 // create new user
 // const me = new User({

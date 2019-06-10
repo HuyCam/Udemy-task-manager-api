@@ -1,8 +1,40 @@
 const express = require('express');
 const router = new express.Router();
 const auth = require('../middleware/auth');
-
+const sharp = require('sharp');
 const User = require('../model/user');
+
+// make it possible to upload file
+const multer = require('multer');
+const upload = multer({
+    limits: {
+        fileSize: 1000000
+    },
+    fileFilter(req, file, cb) {
+        if (!file.originalname.match(/(jpg|jpeg|png)$/i)) {
+            return cb(new Error('Please upload a file image'))
+        }
+        
+        cb(undefined, true);
+    }
+})
+
+router.get('/users/:id/avatar', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user || !user.avatar ) {
+            res.status(404).send();
+        }
+
+        // remember to set Content-type when send it back
+        // Note: you should also set Content-Type to image when send to server too.
+        res.set('Content-Type', 'image/png');
+        res.send(user.avatar);
+    } catch(e) {
+        res.status(500).send();
+    }
+})
 
 router.get('/users/me', auth ,async (req, res) => {
     res.send(req.user);
@@ -19,6 +51,17 @@ router.post('/users', async (req, res) => {
     } catch(e) {
         res.status(400).send(e);
     }
+});
+
+// user post user avatar
+router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
+    const buffer = await sharp(req.file.buffer).png().resize({ width: 250, height: 250 }).toBuffer();
+    req.user.avatar = buffer;
+
+    await req.user.save();
+    res.send('Image has been upload');
+}, (error, req, res, next) => {
+    res.status(400).send({ error: error.message});
 });
 
 // this rout to check user login is legit
@@ -61,20 +104,6 @@ router.post('/users/logoutAll', auth, async (req, res) => {
     }
 })
 
-router.get('/users/:id', async (req, res) => {
-    const _id = req.params.id;
-    try {
-        const user = await User.findById({ _id });
-        if (!user) {
-            res.status(404).send('User not found');
-        }
-
-        res.send(user);
-    } catch(e) {
-        res.status(500).send(e);
-    }
-});
-
 router.patch('/users/me', auth, async (req, res) => {
 
     // send more information if the update data is not included in the scheme.
@@ -87,7 +116,6 @@ router.patch('/users/me', auth, async (req, res) => {
     }
 
     try {
-
 
         updates.forEach(update => {
             req.user[update] = req.body[update];
@@ -117,5 +145,18 @@ router.delete('/users/me', auth,async (req, res) => {
         res.status(500).send();
     }
 });
+
+// delete avatar
+router.delete('/users/me/avatar', auth, async (req, res) => {
+    
+    try {
+        // set the field to undefined and it is automatically deleted on mongoDB
+        req.user.avatar = undefined;
+        await req.user.save();
+        res.send({ msg: 'Delete user avatar succesfully.' });
+    } catch(e) {
+        res.status(400).send();
+    }
+})
 
 module.exports = router;

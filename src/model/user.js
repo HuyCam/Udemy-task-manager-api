@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const bcript = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Task = require('./task');
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -46,27 +47,33 @@ const userSchema = new mongoose.Schema({
             type: String,
             required: true
         }
-    }]
+    }],
+    avatar: {
+        type: Buffer
+    }
+}, {
+    timestamps: true
 });
 
 // create a temporary relationship between localField id and
 // foreignField: owner of Task
 userSchema.virtual('tasks', {
     ref: 'Task',
-    localField: '_id',
-    foreignField: 'owner'
+    localField: '_id',     //
+    foreignField: 'owner' // the field that other model reference this model
 })
 // note that this is not arrow function. Instance method
 userSchema.methods.generateAuthToken = async function() {
     const user = this;
 
-    const token = jwt.sign({ _id: user._id.toString() }, 'thisismynewcourse', { expiresIn: 60 });
+    const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: 600 });
 
     user.tokens = user.tokens.concat({ token });
     await user.save();
     return token;
 }
 
+// toJSON is a function automatically call when server send data to client
 userSchema.methods.toJSON = function() {
     const user = this;
 
@@ -74,6 +81,7 @@ userSchema.methods.toJSON = function() {
 
     delete userObject.password;
     delete userObject.tokens;
+    delete userObject.avatar;
 
     return userObject;
 }
@@ -108,10 +116,16 @@ userSchema.pre('save', async function(next) {
     next();
 })
 
+userSchema.pre('remove', async function(next) {
+    const user = this;
+
+    await Task.deleteMany({ owner: user._id });
+    console.log('predete');
+
+    next();
+})
 
 // User scheme or model
 const User = mongoose.model('User', userSchema);
-
-
 
 module.exports = User;
